@@ -90,8 +90,8 @@ BC-list-note-neighbour-field: next
 ---'''
 
     metadata = extract_metadata(folder_path)
-    tags_output_file_path = '/Users/vmitchell/Documents/Obsidian/Vault/Thought Index Tags.md'
-    creation_time_output_file_path = '/Users/vmitchell/Documents/Obsidian/Vault/Thought Index Creation Time.md'
+    tags_output_file_path = '/Users/vmitchell/Obsidian/Vault/Thought Index Tags.md'
+    creation_time_output_file_path = '/Users/vmitchell/Obsidian/Vault/Thought Index Creation Time.md'
 
     tag_list = format_output(metadata)
     tag_list.insert(0, file_start_tags)
