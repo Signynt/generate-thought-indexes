@@ -75,7 +75,7 @@ def sorted_by_created(metadata):
     return creation_time_list
 
 def main():
-    folder_path = '/Users/vmitchell/Documents/Obsidian/Vault/Thoughts'
+    folder_path = '/Users/vmitchell/Obsidian/Vault/Thoughts'
 
     file_start_tags = '''---
 BC-list-note-field: down
