@@ -2,6 +2,8 @@ import os
 import yaml
 from datetime import datetime
 from collections import defaultdict
+import mermaid as md
+from mermaid.graph import Graph
 
 def parse_frontmatter(file_content):
     frontmatter = {}
@@ -23,7 +25,8 @@ def extract_metadata(folder_path):
                     tag_list = []
                     for tag in tags:
                         split_tags = tag.split('/')
-                        tag_list.append(split_tags)
+                        if 'meta/' not in tag:
+                            tag_list.append(split_tags)
                     filename = filename[:-3]
                     entry = {
                         'name': filename,
@@ -69,6 +72,35 @@ def format_output(metadata):
     category_dict = organize_by_category(metadata)
     return format_category(category_dict)
 
+def mermaid_format(metadata):
+    # Create a mermaid graph of the notes, where each tag is a subgraph, containing the notes with that tag, and arrows connecting the notes based on the time they were created
+    graph_lines = ["flowchart LR"]
+
+    # Create a mapping from filenames to numbers
+    file_id_map = {entry['name']: f'file{index}' for index, entry in enumerate(metadata)}
+
+    # Create subgraphs for each tag
+    tag_subgraphs = defaultdict(list)
+    for entry in metadata:
+        for tag_list in entry['tags']:
+            tag = "/".join(tag_list)
+            tag_subgraphs[tag].append(entry)
+
+    for tag, entries in tag_subgraphs.items():
+        sorted_entries = sorted(entries, key=lambda x: x['created'])
+        graph_lines.append(f"subgraph {tag}")
+        for i, entry in enumerate(sorted_entries):
+            file_id = f'{file_id_map[entry["name"]]}["{entry["name"]}"]'
+            #graph_lines.append(f"{file_id}")
+            if i > 0:
+                prev_file_id = f'{file_id_map[sorted_entries[i - 1]["name"]]}["{sorted_entries[i - 1]["name"]}"]'
+                graph_lines.append(f"{prev_file_id} --> {file_id}")
+        graph_lines.append("end")
+
+    graph_lines.append(f'class {",".join(file_id_map.values())} internal-link')
+    
+    return "\n".join(graph_lines)
+
 def sorted_by_created(metadata):
     sorted_metadata = sorted(metadata, key=lambda x: x['created'])
     creation_time_list = ['- [[' + entry['name'] + ']]' for entry in sorted_metadata]
@@ -95,6 +127,21 @@ BC-list-note-neighbour-field: next
 
     tag_list = format_output(metadata)
     tag_list.insert(0, file_start_tags)
+    #print(metadata)
+
+    #Filter the metadata to only include the first 50 notes
+    metadata = metadata[:200]
+
+    tag_mermaid = mermaid_format(metadata)
+    #print(tag_mermaid)
+    #Save the mermaid graph to a file
+    with open('Thought Index Mermaid.md', 'w', encoding='utf-8') as mermaid_output_file:
+        mermaid_output_file.write(tag_mermaid)
+
+    with open('Thought_Index_Mermaid.mmd', 'w', encoding='utf-8') as mermaid_file:
+        mermaid_file.write(tag_mermaid)
+    
+    os.system('mmdc -i Thought_Index_Mermaid.mmd -o mermaid.svg')
 
     creation_time_list = sorted_by_created(metadata)
     creation_time_list.insert(0, file_start_creation_time)
