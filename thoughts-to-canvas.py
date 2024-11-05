@@ -1,12 +1,11 @@
 import os
-import matplotlib.pyplot as plt
 import re
 import frontmatter
-import networkx as nx
-from networkx.drawing.nx_pydot import graphviz_layout
-#from networkx.nx_agraph import graphviz_layout
-#from networkx.drawing.nx_agraph import graphviz_layout
 
+card_width = 400
+card_height = 400
+vertical_gap = 100
+horizontal_gap = 200
 
 def extract_note_info(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -14,10 +13,39 @@ def extract_note_info(file_path):
         filename = os.path.splitext(os.path.basename(file_path))[0]
         previous = post.get('previous', None)
         creation_datetime = post.get('created', None)
-        #print(previous)
         if previous:
             previous = str(previous).replace('[', '').replace(']', '').strip()  # Remove wikilink brackets
         return filename, previous, creation_datetime
+
+def create_block(node, nodes_dict, vertical_gap=vertical_gap):
+    children = []
+    if node['next']:
+        for child_filename in node['next']:
+            child = nodes_dict[child_filename]
+            child = create_block(child, nodes_dict)
+            children.append(child)
+    if not children:
+        children = None
+    node['children'] = children
+    node['height'] = sum([child['height'] for child in children]) + (len(children) - 1) * vertical_gap if children else card_height
+    return node
+
+def layout_blocks(nodes, x=0, y=0, vertical_gap=vertical_gap, horizontal_gap=horizontal_gap):
+    current_x = x
+    current_y = y
+
+    for node in nodes:
+        node['coordinates'] = {'x': current_x, 'y': current_y}
+        if node['children']:
+            layout_blocks(node['children'], current_x + card_width + horizontal_gap, current_y, vertical_gap, horizontal_gap)
+        current_y += node['height'] + vertical_gap
+
+def auto_layout(nodes):
+    nodes_dict = {node['filename']: node for node in nodes}
+    roots = [node for node in nodes if node['previous'] is None]
+    root_blocks = [create_block(root, nodes_dict) for root in roots]
+    layout_blocks(root_blocks)
+    return nodes
 
 def generate_canvas(folder_path):
     notes = []
@@ -43,45 +71,17 @@ def generate_canvas(folder_path):
     # Sort notes by creation_datetime
     notes = sorted(notes, key=lambda x: x['creation_datetime'])
 
-    # Create a directed graph
-    G = nx.DiGraph()
-
-    # Add a global graph attribute for nodesep
-    G.graph['nodesep'] = '0.1'
-
-    # Add nodes to the graph
-    for note in notes:
-        G.add_node(note['id'], label=note['filename'])
-
-    # Add edges to the graph
-    for note in notes:
-        if note['next']:
-            for next_note in note['next']:
-                next_note_id = re.sub(r'\W+', '', next_note)
-                G.add_edge(note['id'], next_note_id)
-
-    # Get the coordinates for each node
-    pos = graphviz_layout(G, prog='dot')
-    pos = {k: (-v[1], v[0]) for k, v in pos.items()}  # Swap x and y coordinates and invert x for the opposite rotation
-
-    # Print the coordinates and ids
-    for node_id, coordinates in pos.items():
-        for note in notes:
-            if note['id'] == node_id:
-                note['coordinates'] = (coordinates[0] * 10, coordinates[1] * 3)
-
-    card_size = 400
-    card_spacing = 100
+    notes = auto_layout(notes)
 
     canvas_nodes = []
     canvas_edges = []
 
     for note in notes:
         note_id = note['id']
-        note_x = note['coordinates'][0]
-        note_y = note['coordinates'][1]
+        note_x = note['coordinates']['x']
+        note_y = note['coordinates']['y']
         note_name = note['filename']
-        canvas_nodes.append(f'{{"id":"{note_id}","x":{note_x},"y":{note_y},"width":{card_size},"height":{card_size},"type":"file","file":"Thoughts/{note_name}.md"}}')
+        canvas_nodes.append(f'{{"id":"{note_id}","x":{note_x},"y":{note_y},"width":{card_width},"height":{card_height},"type":"file","file":"Thoughts/{note_name}.md"}}')
         if note['previous']:
             # Get the id of the previous note
             previous_id = re.sub(r'\W+', '', note['previous'])
@@ -98,7 +98,6 @@ def generate_canvas(folder_path):
         ]
     }'''
     return text
-
 
 folder_path = "/Users/vmitchell/Obsidian/Vault/Thoughts"
 
