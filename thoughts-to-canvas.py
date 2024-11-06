@@ -104,6 +104,20 @@ folder_path = "/Users/vmitchell/Obsidian/Vault/Thoughts"
 # Generate the Obsidian canvas
 thoughts_canvas = generate_canvas(folder_path)
 
-# Write the generated canvas to a canvas file
-with open('/Users/vmitchell/Obsidian/Vault/Thoughts Canvas.canvas', 'w', encoding='utf-8') as file:
-    file.write(thoughts_canvas)
+# Check if any changes would be made
+canvas_file_path = '/Users/vmitchell/Obsidian/Vault/Thoughts Canvas.canvas'
+
+if os.path.exists(canvas_file_path):
+    with open(canvas_file_path, 'r', encoding='utf-8') as file:
+        existing_content = file.read()
+    if existing_content == thoughts_canvas:
+        #print("No changes detected. The canvas file is up to date.")
+        pass
+    else:
+        with open(canvas_file_path, 'w', encoding='utf-8') as file:
+            file.write(thoughts_canvas)
+        #print("Changes detected. The canvas file has been updated.")
+else:
+    with open(canvas_file_path, 'w', encoding='utf-8') as file:
+        file.write(thoughts_canvas)
+    #print("Canvas file created.")
