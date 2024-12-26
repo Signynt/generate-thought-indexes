@@ -1,3 +1,6 @@
 .DS_Store
 tools/
 __pycache__/
+.python-version
+pyproject.toml
+uv.lock
